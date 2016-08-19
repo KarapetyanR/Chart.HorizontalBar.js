@@ -67,17 +67,17 @@
 
 			// It'd be nice to keep this class totally generic to any rectangle
 			// and simply specify which border to miss out.
-			ctx.moveTo(this.left, top);
-  			ctx.lineTo(right, top);
-  			ctx.lineTo(right, bottom);
-			ctx.lineTo(this.left, bottom);
+			ctx.moveTo(this.left, bottom);
+			ctx.lineTo(this.left, top);
+			ctx.lineTo(right, top);
+			ctx.lineTo(right, bottom);
 			ctx.fill();
 			if (this.showStroke){
 				ctx.stroke();
 			}
 		},
 		inRange : function(chartX,chartY){
-  			return (chartX >= this.left && chartX <= this.x && chartY >= (this.y - this.height/2) && chartY <= (this.y + this.height/2));
+			return (chartY >= this.y - this.height/2 && chartY <= this.y + this.height/2) && (chartX >= this.left && chartX <= this.right);
 		}
 	});
 
@@ -152,7 +152,22 @@
     			this.buildCalculatedLabels();
     			if(this.buildYLabelCounter === 0) this.yLabels = this.xLabels;
           this.xLabels = this.calculatedLabels;
-    			this.yLabelWidth = (this.display && this.showLabels) ? helpers.longestText(this.ctx,this.font,this.yLabels) : 0;
+				var ellipsis = '…';
+				var ellipsisWidth = this.ctx.measureText(ellipsis).width;
+				for (var i = 0; i <= this.yLabels.length - 1; i++)
+				{
+					var width = this.ctx.measureText(this.yLabels[i]).width;
+					if (width > 98 - ellipsisWidth)
+					{
+						while (width > 98 - ellipsisWidth)
+						{
+							this.yLabels[i] = this.yLabels[i].substring(0, this.yLabels[i].length - 1);
+							width = this.ctx.measureText(this.yLabels[i]).width;
+						}
+						this.yLabels[i] += ellipsis;
+					}
+				}
+    			this.yLabelWidth = 87;
     		},
 
         calculateX : function(index){
@@ -177,23 +192,16 @@
     				ctx.font = this.font;
     				helpers.each(this.yLabels,function(labelString,index){
     					var yLabelCenter = this.endPoint - (yLabelGap * index),
-							linePositionY = Math.round(yLabelCenter),
-							drawHorizontalLine = this.showHorizontalLines;
+    						  linePositionY = Math.round(yLabelCenter);
 
     					yLabelCenter -= yLabelGap / 2;
 
-    					ctx.textAlign = "right";
+    					ctx.textAlign = "left";
     					ctx.textBaseline = "middle";
     					if (this.showLabels){
-    						ctx.fillText(labelString,xStart - 10,yLabelCenter);
+    						ctx.fillText(labelString,0,yLabelCenter);
     					}
-
-                        if (index === 0 && !drawHorizontalLine) {
-                            drawHorizontalLine = true;
-                        }
-                        if (drawHorizontalLine){
-                            ctx.beginPath();
-                        }
+    					ctx.beginPath();
     					if (index > 0){
     						// This is a grid line in the centre, so drop that
     						ctx.lineWidth = this.gridLineWidth;
@@ -206,12 +214,10 @@
 
     					linePositionY += helpers.aliasPixel(ctx.lineWidth);
 
-                        if(drawHorizontalLine){
-                            ctx.moveTo(xStart, linePositionY);
-                            ctx.lineTo(this.width, linePositionY);
-                            ctx.stroke();
-                            ctx.closePath();
-                        }
+    					ctx.moveTo(xStart, linePositionY);
+    					ctx.lineTo(this.width, linePositionY);
+    					ctx.stroke();
+    					ctx.closePath();
 
     					ctx.lineWidth = this.lineWidth;
     					ctx.strokeStyle = this.lineColor;
